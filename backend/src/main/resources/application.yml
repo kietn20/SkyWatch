@@ -1,0 +1,32 @@
+# configures spring boot to connect to our docker infra
+
+spring:
+  application:
+    name: skywatch-backend
+
+  # postgreSQL configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/skywatch
+    username: skywatch
+    password: skywatch
+    driver-class-name: org.postgresql.Driver
+
+  # Hibernate/JPA settings
+  jpa:
+    hibernate:
+      ddl-auto: update # automatically creates/updates DB tables based on our Java entities
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: skywatch-group
+      auto-offset-reset: earliest
