@@ -24,7 +24,7 @@ public class OpenSkyService {
     // bounding box for USA to limit data volume
     private static final String OPENSKY_URL = "https://opensky-network.org/api/states/all?lamin=24.0&lomin=-125.0&lamax=49.0&lomax=-66.0";
 
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 10000) // runs every 10,000ms (10 seconds)
     public void pollOpenSky() {
         try {
             log.info("Polling OpenSky API...");
@@ -47,10 +47,10 @@ public class OpenSkyService {
     }
 
     private FlightState mapToFlightState(List<Object> s) {
-
+        // OpenSky index mapping: 0=icao24, 1=callsign, 2=origin, 5=lon, 6=lat, 7=baro_alt, 8=on_ground, 9=velocity, 10=heading
         return FlightState.builder()
                 .icao24((String) s.get(0))
-                .callsign((s.get(1) != null ? ((String) s.get(1)).trim() : "UNKNOWN"))
+                .callsign(s.get(1) != null ? ((String) s.get(1)).trim() : "UNKNOWN")
                 .originCountry((String) s.get(2))
                 .longitude(parseToDouble(s.get(5)))
                 .latitude(parseToDouble(s.get(6)))
