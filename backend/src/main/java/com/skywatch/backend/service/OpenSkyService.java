@@ -42,7 +42,7 @@ public class OpenSkyService {
                 }
             }
         } catch (Exception e) {
-            log.error("Error polling OpenSky: {}", e.getMessage());
+            log.error("Error polling OpenSky", e);
         }
     }
 
