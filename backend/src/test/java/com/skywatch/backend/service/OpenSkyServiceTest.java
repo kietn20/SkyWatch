@@ -1,3 +1,5 @@
+// Unit test for the data mapping logic using Mockito
+
 package com.skywatch.backend.service;
 
 import com.skywatch.backend.model.FlightState;
