@@ -1,7 +1,9 @@
-// renders the Leaflet map and plots flight markers
+// File: frontend/src/components/FlightMap.tsx
+// Purpose: Renders the Leaflet map and clusters markers to fix DOM lag.
 
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster'; // <--- NEW IMPORT
 import L from 'leaflet';
 import type { FlightState } from '../types/FlightState';
 
@@ -9,7 +11,6 @@ interface FlightMapProps {
     flights: FlightState[];
 }
 
-// Create a custom DivIcon to render a simple SVG airplane that we can rotate
 const createPlaneIcon = (heading: number) => {
     return L.divIcon({
         className: 'bg-transparent border-none',
@@ -24,38 +25,41 @@ const createPlaneIcon = (heading: number) => {
 };
 
 export const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
-    // Center map roughly on the US (matches our OpenSky poller bounding box)
     const center: [number, number] = [39.8283, -98.5795];
 
     return (
         <MapContainer center={center} zoom={5} style={{ height: '100%', width: '100%', zIndex: 0 }}>
-            {/* OpenStreetMap Tiles */}
             <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             
-            {/* Map over flights and render markers */}
-            {flights.map((flight) => (
-                <Marker 
-                    key={flight.icao24} 
-                    position={[flight.latitude, flight.longitude]}
-                    icon={createPlaneIcon(flight.trueTrack)}
-                >
-                    <Popup>
-                        <div className="font-sans text-sm">
-                            <strong className="text-blue-600 block text-lg">{flight.callsign}</strong>
-                            <span className="text-gray-500 text-xs uppercase">{flight.icao24}</span>
-                            <div className="mt-2 space-y-1">
-                                <p><b>Alt:</b> {Math.round(flight.baroAltitude)} ft</p>
-                                <p><b>Speed:</b> {Math.round(flight.velocity)} kts</p>
-                                <p><b>Heading:</b> {Math.round(flight.trueTrack)}&deg;</p>
-                                <p><b>Country:</b> {flight.originCountry}</p>
+            {/* NEW: Wrap the Markers in the MarkerClusterGroup */}
+            <MarkerClusterGroup 
+                chunkedLoading={true} // Helps prevent freezing during the initial load
+                maxClusterRadius={60} // Distance (in pixels) to group markers
+            >
+                {flights.map((flight) => (
+                    <Marker 
+                        key={flight.icao24} 
+                        position={[flight.latitude, flight.longitude]}
+                        icon={createPlaneIcon(flight.trueTrack)}
+                    >
+                        <Popup>
+                            <div className="font-sans text-sm">
+                                <strong className="text-blue-600 block text-lg">{flight.callsign}</strong>
+                                <span className="text-gray-500 text-xs uppercase">{flight.icao24}</span>
+                                <div className="mt-2 space-y-1">
+                                    <p><b>Alt:</b> {Math.round(flight.baroAltitude)} ft</p>
+                                    <p><b>Speed:</b> {Math.round(flight.velocity)} kts</p>
+                                    <p><b>Heading:</b> {Math.round(flight.trueTrack)}&deg;</p>
+                                    <p><b>Country:</b> {flight.originCountry}</p>
+                                </div>
                             </div>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
+                        </Popup>
+                    </Marker>
+                ))}
+            </MarkerClusterGroup>
         </MapContainer>
     );
 };
