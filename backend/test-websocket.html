@@ -1,0 +1,37 @@
+<!-- File: test-websocket.html -->
+<!-- Purpose: Verifies STOMP connectivity and payload reception -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <!-- Include Stomp.js library from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+</head>
+<body>
+    <h2>WebSocket Connection Status: <span id="status" style="color: red;">Disconnected</span></h2>
+    <h3>Live Flights Count: <span id="count">0</span></h3>
+    <pre id="data" style="background: #eee; padding: 10px; height: 400px; overflow-y: scroll;"></pre>
+
+    <script>
+        const stompClient = new window.StompJs.Client({
+            brokerURL: 'ws://localhost:8080/ws',
+            reconnectDelay: 5000,
+            onConnect: (frame) => {
+                document.getElementById('status').innerText = 'Connected!';
+                document.getElementById('status').style.color = 'green';
+                
+                // Subscribe to the topic
+                stompClient.subscribe('/topic/flights', (message) => {
+                    const flights = JSON.parse(message.body);
+                    document.getElementById('count').innerText = flights.length;
+                    document.getElementById('data').innerText = JSON.stringify(flights[0], null, 2) + "\n\n... and " + (flights.length - 1) + " more.";
+                });
+            },
+            onWebSocketError: (error) => { console.error('Error with websocket', error); },
+            onStompError: (frame) => { console.error('Broker reported error', frame); }
+        });
+
+        stompClient.activate();
+    </script>
+</body>
+</html>
