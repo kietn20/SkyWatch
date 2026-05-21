@@ -38,4 +38,9 @@ public class FlightStateRepository {
         return flights == null ? Collections.emptyList() : 
             flights.stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
+
+    public FlightState getFlightState(String icao24) {
+        String key = KEY_PREFIX + icao24;
+        return redisTemplate.opsForValue().get(key);
+    }
 }
