@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 
 import { Radar } from "lucide-react";
-import { useWebSocket } from "./src/hooks/useWebSocket";
-import type { FlightState } from "./src/types/FlightState";
-import type { Filters } from "./src/types/Filters";
-import { FilterPanel } from "./src/components/FilterPanel";
-import { FlightDetailsPanel } from "./src/components/FlightDetailsPanel";
-import { FlightMap } from "./src/components/FlightMap";
+import { useWebSocket } from "./hooks/useWebSocket";
+import type { FlightState } from "./types/FlightState";
+import type { Filters } from "./types/Filters";
+import { FilterPanel } from "./components/FilterPanel";
+import { FlightDetailsPanel } from "./components/FlightDetailsPanel";
+import { FlightMap } from "./components/FlightMap";
 
 function App() {
 	const { flights, isConnected } = useWebSocket();
