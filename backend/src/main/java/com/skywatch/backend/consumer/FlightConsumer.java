@@ -6,6 +6,7 @@ import com.skywatch.backend.entity.FlightPosition;
 import com.skywatch.backend.model.FlightState;
 import com.skywatch.backend.repository.FlightPositionRepository;
 import com.skywatch.backend.repository.FlightStateRepository;
+import com.skywatch.backend.service.GeofenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -20,6 +21,7 @@ public class FlightConsumer {
 
     private final FlightPositionRepository postgresRepository;
     private final FlightStateRepository redisRepository;
+    private final GeofenceService geofenceService;
 
     // conversion constants
     private static final double METERS_TO_FEET = 3.28084;
@@ -34,6 +36,15 @@ public class FlightConsumer {
         // update to new values
         rawFlight.setBaroAltitude(altFeet);
         rawFlight.setVelocity(speedKnots);
+
+
+        // Geofence logic
+        // Fetch the PREVIOUS state from Redis before we overwrite it
+        FlightState oldState = redisRepository.getFlightState(rawFlight.getIcao24());
+        // Let the GeofenceService decide if an alert should be triggered
+        geofenceService.evaluateFlight(oldState, rawFlight);
+
+
 
         // 2. Save to Redis (Hot Store - Latest state only)
         redisRepository.saveFlightState(rawFlight);
