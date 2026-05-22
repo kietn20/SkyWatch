@@ -1,11 +1,8 @@
 // renders the Leaflet map and clusters markers to fix DOM lag
 
-import React from "react";
-import { MapContainer, TileLayer, Marker, FeatureGroup } from "react-leaflet";
-import { EditControl } from "react-leaflet-draw";
-import MarkerClusterGroup from "react-leaflet-cluster";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import "leaflet-draw/dist/leaflet.draw.css";
 import type { FlightState } from "../types/FlightState";
 
 interface FlightMapProps {
@@ -28,6 +25,114 @@ const createPlaneIcon = (heading: number) => {
 	});
 };
 
+type RuntimeLeaflet = typeof L & {
+	Draw: {
+		Event: {
+			CREATED: string;
+			DELETED: string;
+		};
+	};
+	Control: typeof L.Control & {
+		Draw: new (options: {
+			position: string;
+			draw: Record<string, boolean>;
+			edit: { featureGroup: L.FeatureGroup };
+		}) => L.Control;
+	};
+	FeatureGroup: new () => L.FeatureGroup;
+};
+
+const GeofenceDrawControl: React.FC<{
+	onGeofenceCreated: (bounds: L.LatLngBounds) => void;
+	onGeofenceCleared: () => void;
+}> = ({ onGeofenceCreated, onGeofenceCleared }) => {
+	const map = useMap();
+
+	useEffect(() => {
+		const runtimeLeaflet = (window as unknown as { L?: RuntimeLeaflet }).L;
+		if (!runtimeLeaflet) {
+			return;
+		}
+
+		const drawnItems = new runtimeLeaflet.FeatureGroup();
+		map.addLayer(drawnItems);
+
+		const drawControl = new runtimeLeaflet.Control.Draw({
+			position: "topright",
+			draw: {
+				rectangle: true,
+				polygon: false,
+				circle: false,
+				circlemarker: false,
+				marker: false,
+				polyline: false,
+			},
+			edit: {
+				featureGroup: drawnItems,
+			},
+		});
+
+		const handleCreated = (e: L.LeafletEvent & { layer: L.Layer }) => {
+			drawnItems.clearLayers();
+			drawnItems.addLayer(e.layer);
+			if ("getBounds" in e.layer) {
+				onGeofenceCreated((e.layer as L.Rectangle).getBounds());
+			}
+		};
+
+		const handleDeleted = () => {
+			onGeofenceCleared();
+		};
+
+		map.addControl(drawControl);
+		map.on(runtimeLeaflet.Draw.Event.CREATED, handleCreated);
+		map.on(runtimeLeaflet.Draw.Event.DELETED, handleDeleted);
+
+		return () => {
+			map.off(runtimeLeaflet.Draw.Event.CREATED, handleCreated);
+			map.off(runtimeLeaflet.Draw.Event.DELETED, handleDeleted);
+			map.removeControl(drawControl);
+			map.removeLayer(drawnItems);
+		};
+	}, [map, onGeofenceCreated, onGeofenceCleared]);
+
+	return null;
+};
+
+const VisibleFlights: React.FC<{
+	flights: FlightState[];
+	onFlightSelect: (flight: FlightState) => void;
+}> = ({ flights, onFlightSelect }) => {
+	const map = useMap();
+	const [bounds, setBounds] = React.useState(map.getBounds());
+
+	useMapEvents({
+		moveend: () => setBounds(map.getBounds()),
+		zoomend: () => setBounds(map.getBounds()),
+		load: () => setBounds(map.getBounds()),
+	});
+
+	const visibleFlights = React.useMemo(() => {
+		const paddedBounds = bounds.pad(0.15);
+		return flights.filter((flight) =>
+			paddedBounds.contains([flight.latitude, flight.longitude])
+		);
+	}, [bounds, flights]);
+
+	return (
+		<>
+			{visibleFlights.map((flight) => (
+				<Marker
+					key={flight.icao24}
+					position={[flight.latitude, flight.longitude]}
+					icon={createPlaneIcon(flight.trueTrack)}
+					eventHandlers={{ click: () => onFlightSelect(flight) }}
+				/>
+			))}
+		</>
+	);
+};
+
 export const FlightMap: React.FC<FlightMapProps> = ({
 	flights,
 	onFlightSelect,
@@ -35,16 +140,6 @@ export const FlightMap: React.FC<FlightMapProps> = ({
 	onGeofenceCleared,
 }) => {
 	const center: [number, number] = [39.8283, -98.5795];
-
-	const handleCreated = (e: any) => {
-		// e.layer contains the drawn rectangle
-		const bounds: L.LatLngBounds = e.layer.getBounds();
-		onGeofenceCreated(bounds);
-	};
-
-	const handleDeleted = () => {
-		onGeofenceCleared();
-	};
 
 	return (
 		<MapContainer
@@ -54,32 +149,12 @@ export const FlightMap: React.FC<FlightMapProps> = ({
 		>
 			<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-			<FeatureGroup>
-				<EditControl
-					position="topright"
-					onCreated={handleCreated}
-					onDeleted={handleDeleted}
-					draw={{
-						rectangle: true, // want boxes
-						polygon: false,
-						circle: false,
-						circlemarker: false,
-						marker: false,
-						polyline: false,
-					}}
-				/>
-			</FeatureGroup>
+			<GeofenceDrawControl
+				onGeofenceCreated={onGeofenceCreated}
+				onGeofenceCleared={onGeofenceCleared}
+			/>
 
-			<MarkerClusterGroup chunkedLoading={true} maxClusterRadius={60}>
-				{flights.map((flight) => (
-					<Marker
-						key={flight.icao24}
-						position={[flight.latitude, flight.longitude]}
-						icon={createPlaneIcon(flight.trueTrack)}
-						eventHandlers={{ click: () => onFlightSelect(flight) }}
-					/>
-				))}
-			</MarkerClusterGroup>
+			<VisibleFlights flights={flights} onFlightSelect={onFlightSelect} />
 		</MapContainer>
 	);
 };
