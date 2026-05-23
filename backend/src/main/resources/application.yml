@@ -6,7 +6,7 @@ spring:
 
   # postgreSQL configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/skywatch
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/skywatch
     username: skywatch
     password: skywatch
     driver-class-name: org.postgresql.Driver
@@ -15,18 +15,18 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update # automatically creates/updates DB tables based on our Java entities
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
 
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:localhost}
       port: 6379
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_HOST:127.0.0.1}:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
