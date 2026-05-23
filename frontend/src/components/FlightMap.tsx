@@ -1,15 +1,25 @@
 // renders the Leaflet map and clusters markers to fix DOM lag
 
 import React, { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import {
+	MapContainer,
+	TileLayer,
+	Marker,
+	Polyline,
+	useMap,
+	useMapEvents,
+} from "react-leaflet";
 import L from "leaflet";
 import type { FlightState } from "../types/FlightState";
+import type { FlightPosition } from "../types/FlightPosition";
 
 interface FlightMapProps {
 	flights: FlightState[];
 	onFlightSelect: (flight: FlightState) => void;
 	onGeofenceCreated: (bounds: L.LatLngBounds) => void;
 	onGeofenceCleared: () => void;
+	selectedFlight?: FlightState | null;
+	flightTrail?: FlightPosition[];
 }
 
 const createPlaneIcon = (heading: number) => {
@@ -99,6 +109,26 @@ const GeofenceDrawControl: React.FC<{
 	return null;
 };
 
+const AutoPanToSelection: React.FC<{ selectedFlight?: FlightState | null }> = ({
+	selectedFlight,
+}) => {
+	const map = useMap();
+
+	useEffect(() => {
+		if (!selectedFlight) return;
+		map.flyTo(
+			[selectedFlight.latitude, selectedFlight.longitude],
+			Math.max(map.getZoom(), 8),
+			{
+				animate: true,
+				duration: 0.8,
+			},
+		);
+	}, [map, selectedFlight]);
+
+	return null;
+};
+
 const VisibleFlights: React.FC<{
 	flights: FlightState[];
 	onFlightSelect: (flight: FlightState) => void;
@@ -115,7 +145,7 @@ const VisibleFlights: React.FC<{
 	const visibleFlights = React.useMemo(() => {
 		const paddedBounds = bounds.pad(0.15);
 		return flights.filter((flight) =>
-			paddedBounds.contains([flight.latitude, flight.longitude])
+			paddedBounds.contains([flight.latitude, flight.longitude]),
 		);
 	}, [bounds, flights]);
 
@@ -133,11 +163,32 @@ const VisibleFlights: React.FC<{
 	);
 };
 
+const FlightTrail: React.FC<{ trail: FlightPosition[] }> = ({ trail }) => {
+	if (trail.length < 2) return null;
+	const path: [number, number][] = trail.map((point) => [
+		point.latitude,
+		point.longitude,
+	]);
+	return (
+		<Polyline
+			positions={path}
+			pathOptions={{
+				color: "#60a5fa",
+				weight: 3,
+				opacity: 0.85,
+				dashArray: "6 8",
+			}}
+		/>
+	);
+};
+
 export const FlightMap: React.FC<FlightMapProps> = ({
 	flights,
 	onFlightSelect,
 	onGeofenceCreated,
 	onGeofenceCleared,
+	selectedFlight,
+	flightTrail = [],
 }) => {
 	const center: [number, number] = [39.8283, -98.5795];
 
@@ -148,11 +199,14 @@ export const FlightMap: React.FC<FlightMapProps> = ({
 			style={{ height: "100%", width: "100%", zIndex: 0 }}
 		>
 			<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+			<AutoPanToSelection selectedFlight={selectedFlight} />
 
 			<GeofenceDrawControl
 				onGeofenceCreated={onGeofenceCreated}
 				onGeofenceCleared={onGeofenceCleared}
 			/>
+
+			<FlightTrail trail={flightTrail} />
 
 			<VisibleFlights flights={flights} onFlightSelect={onFlightSelect} />
 		</MapContainer>

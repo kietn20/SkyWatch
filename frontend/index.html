@@ -1,53 +1,91 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
-    <link rel="stylesheet" href="/node_modules/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="/node_modules/leaflet-draw/dist/leaflet.draw.css" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script src="/node_modules/leaflet/dist/leaflet.js"></script>
-    <script src="/node_modules/leaflet-draw/dist/leaflet.draw.js"></script>
-    <script>
-      if (window.L && window.L.GeometryUtil) {
-        window.L.GeometryUtil.readableArea = function (e, metric, precision) {
-          const defaultPrecision = { km: 2, ha: 2, m: 0, mi: 2, ac: 2, yd: 0, ft: 0, nm: 2 };
-          const parsedPrecision = window.L.Util.extend({}, defaultPrecision, precision);
-          let area;
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>frontend</title>
+		<link rel="stylesheet" href="/node_modules/leaflet/dist/leaflet.css" />
+		<link
+			rel="stylesheet"
+			href="/node_modules/leaflet-draw/dist/leaflet.draw.css"
+		/>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script src="/node_modules/leaflet/dist/leaflet.js"></script>
+		<script src="/node_modules/leaflet-draw/dist/leaflet.draw.js"></script>
+		<script>
+			if (window.L && window.L.GeometryUtil) {
+				window.L.GeometryUtil.readableArea = function (
+					e,
+					metric,
+					precision,
+				) {
+					const defaultPrecision = {
+						km: 2,
+						ha: 2,
+						m: 0,
+						mi: 2,
+						ac: 2,
+						yd: 0,
+						ft: 0,
+						nm: 2,
+					};
+					const parsedPrecision = window.L.Util.extend(
+						{},
+						defaultPrecision,
+						precision,
+					);
+					let area;
 
-          if (metric) {
-            let units = ["ha", "m"];
-            const type = typeof metric;
-            if (type === "string") {
-              units = [metric];
-            } else if (type !== "boolean") {
-              units = metric;
-            }
+					if (metric) {
+						let units = ["ha", "m"];
+						const type = typeof metric;
+						if (type === "string") {
+							units = [metric];
+						} else if (type !== "boolean") {
+							units = metric;
+						}
 
-            area =
-              e >= 1e6 && units.indexOf("km") !== -1
-                ? window.L.GeometryUtil.formattedNumber(1e-6 * e, parsedPrecision.km) + " km²"
-                : e >= 1e4 && units.indexOf("ha") !== -1
-                  ? window.L.GeometryUtil.formattedNumber(1e-4 * e, parsedPrecision.ha) + " ha"
-                  : window.L.GeometryUtil.formattedNumber(e, parsedPrecision.m) + " m²";
-          } else {
-            e /= 0.836127;
-            area =
-              e >= 3097600
-                ? window.L.GeometryUtil.formattedNumber(e / 3097600, parsedPrecision.mi) + " mi²"
-                : e >= 4840
-                  ? window.L.GeometryUtil.formattedNumber(e / 4840, parsedPrecision.ac) + " acres"
-                  : window.L.GeometryUtil.formattedNumber(e, parsedPrecision.yd) + " yd²";
-          }
+						area =
+							e >= 1e6 && units.indexOf("km") !== -1
+								? window.L.GeometryUtil.formattedNumber(
+										1e-6 * e,
+										parsedPrecision.km,
+									) + " km²"
+								: e >= 1e4 && units.indexOf("ha") !== -1
+									? window.L.GeometryUtil.formattedNumber(
+											1e-4 * e,
+											parsedPrecision.ha,
+										) + " ha"
+									: window.L.GeometryUtil.formattedNumber(
+											e,
+											parsedPrecision.m,
+										) + " m²";
+					} else {
+						e /= 0.836127;
+						area =
+							e >= 3097600
+								? window.L.GeometryUtil.formattedNumber(
+										e / 3097600,
+										parsedPrecision.mi,
+									) + " mi²"
+								: e >= 4840
+									? window.L.GeometryUtil.formattedNumber(
+											e / 4840,
+											parsedPrecision.ac,
+										) + " acres"
+									: window.L.GeometryUtil.formattedNumber(
+											e,
+											parsedPrecision.yd,
+										) + " yd²";
+					}
 
-          return area;
-        };
-      }
-    </script>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+					return area;
+				};
+			}
+		</script>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
 </html>

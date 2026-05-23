@@ -7,7 +7,7 @@ import { resolve } from 'path'
 export default defineConfig({
   resolve: {
     alias: [
-	  { find: /^leaflet$/, replacement: resolve(__dirname, 'src', 'shims', 'leaflet.js') },
+      { find: /^leaflet$/, replacement: resolve(__dirname, 'src', 'shims', 'leaflet.js') },
       { find: /^leaflet-draw$/, replacement: resolve(__dirname, 'src', 'shims', 'leaflet-draw.js') },
     ],
   },
