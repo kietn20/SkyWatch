@@ -87,7 +87,7 @@ npm run dev
 ```
 Navigate to `http://localhost:5173` in your browser. Wait ~10 seconds for the first Kafka polling cycle to complete, and the aircraft will populate the map!
 
-## 📸 Screenshots
+## Screenshot
 
 ![Live Dashboard](dashboard.png)
 *Live Map tracking of commercial aircrafts*
