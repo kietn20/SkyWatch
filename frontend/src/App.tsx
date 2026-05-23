@@ -16,7 +16,7 @@ function App() {
 	const [selectedFlight, setSelectedFlight] = useState<FlightState | null>(
 		null,
 	);
-	const [flightTrail, setFlightTrail] = useState<FlightPosition[]>([]);
+	const [trail, setTrail] = useState<[number, number][]>([]);
 
 	const [filters, setFilters] = useState<Filters>({
 		minAltitude: 0,
@@ -40,14 +40,41 @@ function App() {
 		);
 	}, [flights, filters]);
 
+	const activeSelectedFlight = useMemo(() => {
+		if (!selectedFlight) return null;
+		return (
+			flights.find((f) => f.icao24 === selectedFlight.icao24) ??
+			selectedFlight
+		);
+	}, [flights, selectedFlight]);
+
 	useEffect(() => {
-		if (selectedFlight) {
-			const updatedFlight = flights.find(
-				(f) => f.icao24 === selectedFlight.icao24,
-			);
-			if (updatedFlight) setSelectedFlight(updatedFlight);
+		if (!activeSelectedFlight) {
+			return;
 		}
-	}, [flights]);
+
+		let isActive = true;
+		fetch(
+			`http://localhost:8080/api/flights/history/${activeSelectedFlight.icao24}`,
+		)
+			.then((res) => res.json())
+			.then((data: FlightPosition[]) => {
+				if (!isActive) return;
+				const coords = data.map(
+					(pos) => [pos.latitude, pos.longitude] as [number, number],
+				);
+				setTrail(coords);
+			})
+			.catch((error) => {
+				if (!isActive) return;
+				console.error("Failed to load trail", error);
+				setTrail([]);
+			});
+
+		return () => {
+			isActive = false;
+		};
+	}, [activeSelectedFlight]);
 
 	const handleGeofenceCreated = async (bounds: L.LatLngBounds) => {
 		const payload = {
@@ -89,24 +116,9 @@ function App() {
 		setSelectedFlight(flight);
 	};
 
-	const handleSearchResults = (results: FlightPosition[]) => {
-		setFlightTrail(results);
-		if (results.length === 0) {
-			return;
-		}
-
-		const latest = results[results.length - 1];
-		setSelectedFlight({
-			icao24: latest.icao24,
-			callsign: latest.callsign,
-			latitude: latest.latitude,
-			longitude: latest.longitude,
-			baroAltitude: latest.altitude,
-			velocity: latest.velocity,
-			trueTrack: latest.heading,
-			originCountry: "Searched",
-			onGround: false,
-		});
+	const handleCloseFlightDetails = () => {
+		setSelectedFlight(null);
+		setTrail([]);
 	};
 
 	return (
@@ -134,10 +146,7 @@ function App() {
 					</div>
 
 					<div className="flex items-center gap-6">
-						<SearchBar
-							onSelectResult={handleSelectResult}
-							onSearchResults={handleSearchResults}
-						/>
+						<SearchBar onSelectResult={handleSelectResult} />
 						<div className="text-right">
 							<p className="text-2xl font-bold text-white">
 								{filteredFlights.length}
@@ -160,8 +169,8 @@ function App() {
 
 			<FilterPanel filters={filters} setFilters={setFilters} />
 			<FlightDetailsPanel
-				flight={selectedFlight}
-				onClose={() => setSelectedFlight(null)}
+				flight={activeSelectedFlight}
+				onClose={handleCloseFlightDetails}
 			/>
 
 			<AlertContainer alerts={alerts} onDismiss={dismissAlert} />
@@ -172,8 +181,8 @@ function App() {
 					onFlightSelect={setSelectedFlight}
 					onGeofenceCreated={handleGeofenceCreated}
 					onGeofenceCleared={handleGeofenceCleared}
-					selectedFlight={selectedFlight}
-					flightTrail={flightTrail}
+					selectedFlight={activeSelectedFlight}
+					trail={trail}
 				/>
 			</main>
 		</div>

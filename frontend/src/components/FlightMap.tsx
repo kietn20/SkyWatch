@@ -11,7 +11,6 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import type { FlightState } from "../types/FlightState";
-import type { FlightPosition } from "../types/FlightPosition";
 
 interface FlightMapProps {
 	flights: FlightState[];
@@ -19,14 +18,14 @@ interface FlightMapProps {
 	onGeofenceCreated: (bounds: L.LatLngBounds) => void;
 	onGeofenceCleared: () => void;
 	selectedFlight?: FlightState | null;
-	flightTrail?: FlightPosition[];
+	trail?: [number, number][];
 }
 
-const createPlaneIcon = (heading: number) => {
+const createPlaneIcon = (heading: number, selected = false) => {
 	return L.divIcon({
 		className: "bg-transparent border-none",
 		html: `<div style="transform: rotate(${heading}deg); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" class="w-6 h-6 drop-shadow-md hover:fill-amber-400 transition-colors cursor-pointer">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${selected ? "#f59e0b" : "#3b82f6"}" class="w-6 h-6 drop-shadow-md hover:fill-amber-400 transition-colors cursor-pointer">
                    <path d="M3.1 11.2l6.5-1.9 4.3-7.5c.3-.5.9-.8 1.5-.8h1.2c.5 0 .8.5.6 1L15 8.5h4.6c.9 0 1.7.6 1.9 1.5.1.5-.1 1-.6 1.3l-2.4 1.4-1.6 4.9c-.2.5-.7.8-1.2.8H14.5c-.4 0-.8-.4-.7-.9l1.4-4.2-5.1-1.5-3.8 4.6c-.3.4-.9.6-1.4.6H3.6c-.5 0-.8-.5-.6-1l2.4-4.3-2.1-.6c-.5-.1-.8-.6-.6-1.1.2-.5.7-.8 1.2-.7z"/>
                  </svg>
                </div>`,
@@ -132,7 +131,8 @@ const AutoPanToSelection: React.FC<{ selectedFlight?: FlightState | null }> = ({
 const VisibleFlights: React.FC<{
 	flights: FlightState[];
 	onFlightSelect: (flight: FlightState) => void;
-}> = ({ flights, onFlightSelect }) => {
+	selectedFlight?: FlightState | null;
+}> = ({ flights, onFlightSelect, selectedFlight }) => {
 	const map = useMap();
 	const [bounds, setBounds] = React.useState(map.getBounds());
 
@@ -148,6 +148,7 @@ const VisibleFlights: React.FC<{
 			paddedBounds.contains([flight.latitude, flight.longitude]),
 		);
 	}, [bounds, flights]);
+	const selectedIcao24 = selectedFlight?.icao24;
 
 	return (
 		<>
@@ -155,7 +156,10 @@ const VisibleFlights: React.FC<{
 				<Marker
 					key={flight.icao24}
 					position={[flight.latitude, flight.longitude]}
-					icon={createPlaneIcon(flight.trueTrack)}
+					icon={createPlaneIcon(
+						flight.trueTrack,
+						flight.icao24 === selectedIcao24,
+					)}
 					eventHandlers={{ click: () => onFlightSelect(flight) }}
 				/>
 			))}
@@ -163,20 +167,30 @@ const VisibleFlights: React.FC<{
 	);
 };
 
-const FlightTrail: React.FC<{ trail: FlightPosition[] }> = ({ trail }) => {
+const SelectedFlightMarker: React.FC<{
+	selectedFlight: FlightState;
+	onFlightSelect: (flight: FlightState) => void;
+}> = ({ selectedFlight, onFlightSelect }) => {
+	return (
+		<Marker
+			position={[selectedFlight.latitude, selectedFlight.longitude]}
+			icon={createPlaneIcon(selectedFlight.trueTrack, true)}
+			eventHandlers={{ click: () => onFlightSelect(selectedFlight) }}
+			zIndexOffset={1000}
+		/>
+	);
+};
+
+const FlightTrail: React.FC<{ trail: [number, number][] }> = ({ trail }) => {
 	if (trail.length < 2) return null;
-	const path: [number, number][] = trail.map((point) => [
-		point.latitude,
-		point.longitude,
-	]);
 	return (
 		<Polyline
-			positions={path}
+			positions={trail}
 			pathOptions={{
-				color: "#60a5fa",
-				weight: 3,
-				opacity: 0.85,
-				dashArray: "6 8",
+				color: "#f59e0b",
+				weight: 4,
+				opacity: 0.9,
+				dashArray: "2 10",
 			}}
 		/>
 	);
@@ -188,7 +202,7 @@ export const FlightMap: React.FC<FlightMapProps> = ({
 	onGeofenceCreated,
 	onGeofenceCleared,
 	selectedFlight,
-	flightTrail = [],
+	trail = [],
 }) => {
 	const center: [number, number] = [39.8283, -98.5795];
 
@@ -206,9 +220,19 @@ export const FlightMap: React.FC<FlightMapProps> = ({
 				onGeofenceCleared={onGeofenceCleared}
 			/>
 
-			<FlightTrail trail={flightTrail} />
+			<FlightTrail trail={trail} />
+			{selectedFlight && (
+				<SelectedFlightMarker
+					selectedFlight={selectedFlight}
+					onFlightSelect={onFlightSelect}
+				/>
+			)}
 
-			<VisibleFlights flights={flights} onFlightSelect={onFlightSelect} />
+			<VisibleFlights
+				flights={flights}
+				onFlightSelect={onFlightSelect}
+				selectedFlight={selectedFlight}
+			/>
 		</MapContainer>
 	);
 };

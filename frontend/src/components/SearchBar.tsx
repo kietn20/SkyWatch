@@ -5,13 +5,9 @@ import type { FlightState } from "../types/FlightState";
 
 interface SearchBarProps {
 	onSelectResult: (flight: FlightState) => void;
-	onSearchResults?: (results: FlightPosition[]) => void;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({
-	onSelectResult,
-	onSearchResults,
-}) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<FlightPosition[]>([]);
 	const [isSearching, setIsSearching] = useState(false);
@@ -27,10 +23,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 			);
 			const data: FlightPosition[] = await res.json();
 			setResults(data);
-			onSearchResults?.(data);
 		} catch (error) {
 			console.error("Search failed", error);
-			onSearchResults?.([]);
 		} finally {
 			setIsSearching(false);
 		}
